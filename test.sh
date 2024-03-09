@@ -39,5 +39,6 @@ assert 0 '1+1>2;'
 assert 10 'a=10;'
 assert 10 'a=10; a;'
 assert 10 'a=1; b=2; c=3; d=4; a+b+c+d;'
+assert 10 'foo = 3; bar = 7; foo + bar;'
 
 echo OK
