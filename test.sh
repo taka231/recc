@@ -38,7 +38,11 @@ assert 1 '1+1>=2;'
 assert 0 '1+1>2;'
 assert 10 'a=10;'
 assert 10 'a=10; a;'
+assert 30 'a=10; b=20; c = a + b; c;'
 assert 10 'a=1; b=2; c=3; d=4; a+b+c+d;'
 assert 10 'foo = 3; bar = 7; foo + bar;'
+assert 10 'foo = 3; bar = 7; return foo + bar;'
+assert 10 'return_10 = 10; return return_10;'
+assert 10 'return 10; return 20;'
 
 echo OK

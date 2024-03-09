@@ -82,6 +82,11 @@ int expect_number() {
   return val;
 }
 
+int is_alnum(char c) {
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
+         ('0' <= c && c <= '9') || c == '_';
+}
+
 bool at_eof() { return token->kind == TK_EOF; }
 
 LVar *locals;
@@ -138,10 +143,16 @@ Token *tokenize(char *p) {
       continue;
     }
 
-    if ('a' <= *p && *p <= 'z') {
+    if (strncmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_RETURN, cur, p);
+      p += 6;
+      continue;
+    }
+
+    if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p++);
       cur->len = 1;
-      while ('a' <= *p && *p <= 'z') {
+      while (is_alnum(*p)) {
         cur->len++;
         p++;
       }
@@ -266,8 +277,19 @@ Node *assign() {
 Node *expr() { return assign(); }
 
 Node *stmt() {
-  Node *node = expr();
-  expect(";");
+  Node *node;
+
+  if(token->kind == TK_RETURN) {
+    token = token->next;
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_RETURN;
+    node->lhs = expr();
+  } else {
+    node = expr();
+  }
+
+  if (!consume(";"))
+    error_at(token->str, "';'ではないトークンです");
   return node;
 }
 
