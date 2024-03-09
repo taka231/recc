@@ -97,4 +97,20 @@ for (;;i = i + 1)
     return i;
 '
 
+assert 10 '{
+  i = 10;
+  return i;
+}'
+
+assert 55 '
+sum = 0;
+i = 0;
+while (i <= 10) {
+  sum = sum + i;
+  i = i + 1;
+}
+return sum;
+'
+
+
 echo OK

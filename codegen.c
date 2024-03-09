@@ -88,6 +88,13 @@ void gen(Node *node) {
     printf(".Lend%d:\n", label);
     return;
   }
+  case ND_BLOCK:
+    while (node->next) {
+      node = node->next;
+      gen(node);
+      printf("  pop rax\n");
+    }
+    return;
   }
 
   gen(node->lhs);

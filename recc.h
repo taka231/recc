@@ -42,6 +42,7 @@ typedef enum {
   ND_IF,     // if
   ND_WHILE,  // while
   ND_FOR,    // for
+  ND_BLOCK,  // { ... }
 } NodeKind;
 
 typedef struct Node Node;
@@ -54,6 +55,7 @@ struct Node {
   Node *else_stmt; // else
   Node *for_third; // forの条件部の3番目の式
   Node *for_body;  // for
+  Node *next;      // 次の文
   int val;       // kindがND_NUMの場合のみ使う
   int offset;    // kindがND_LVARの場合のみ使う
 };
