@@ -1,6 +1,8 @@
 #include "recc.h"
 #include <stdio.h>
 
+int labelseq = 1;
+
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR)
     error("代入の左辺値が変数ではありません");
@@ -36,6 +38,56 @@ void gen(Node *node) {
     printf("  pop rbp\n");
     printf("  ret\n");
     return;
+  case ND_IF: {
+    int label = labelseq++;
+    gen(node->lhs); // cond
+    printf("  pop rax\n");
+    printf("  cmp rax, 0\n");
+    if (node->else_stmt) {
+      printf("  je .Lelse%d\n", label);
+      gen(node->rhs); // then
+      printf("  jmp .Lend%d\n", label);
+      printf(".Lelse%d:\n", label);
+      gen(node->else_stmt); // else
+    } else {
+      printf("  je .Lend%d\n", label);
+      gen(node->rhs); // then
+    }
+    printf(".Lend%d:\n", label);
+    return;
+  }
+  case ND_WHILE: {
+    int label = labelseq++;
+    printf(".Lbegin%d:\n", label);
+    gen(node->lhs); // cond
+    printf("  pop rax\n");
+    printf("  cmp rax, 0\n");
+    printf("  je .Lend%d\n", label);
+    gen(node->rhs); // body
+    printf("  jmp .Lbegin%d\n", label);
+    printf(".Lend%d:\n", label);
+    return;
+  }
+  case ND_FOR: {
+    int label = labelseq++;
+    if (node->lhs) {
+      gen(node->lhs); // init
+    }
+    printf(".Lbegin%d:\n", label);
+    if (node->rhs) {
+      gen(node->rhs); // cond
+      printf("  pop rax\n");
+      printf("  cmp rax, 0\n");
+      printf("  je .Lend%d\n", label);
+    }
+    gen(node->for_body);
+    if (node->for_third) {
+      gen(node->for_third); // post
+    }
+    printf("  jmp .Lbegin%d\n", label);
+    printf(".Lend%d:\n", label);
+    return;
+  }
   }
 
   gen(node->lhs);

@@ -55,6 +55,13 @@ bool consume(char *op) {
   return true;
 }
 
+bool consume_kind(TokenKind kind) {
+  if (token->kind != kind)
+    return false;
+  token = token->next;
+  return true;
+}
+
 Token *consume_ident() {
   if (token->kind != TK_IDENT)
     return NULL;
@@ -146,6 +153,30 @@ Token *tokenize(char *p) {
     if (strncmp(p, "return", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_RETURN, cur, p);
       p += 6;
+      continue;
+    }
+
+    if (strncmp(p, "if", 2) == 0 && !is_alnum(p[2])) {
+      cur = new_token(TK_IF, cur, p);
+      p += 2;
+      continue;
+    }
+
+    if (strncmp(p, "else", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_ELSE, cur, p);
+      p += 4;
+      continue;
+    }
+
+    if (strncmp(p, "while", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_WHILE, cur, p);
+      p += 5;
+      continue;
+    }
+
+    if (strncmp(p, "for", 3) == 0 && !is_alnum(p[3])) {
+      cur = new_token(TK_FOR, cur, p);
+      p += 3;
       continue;
     }
 
@@ -279,17 +310,52 @@ Node *expr() { return assign(); }
 Node *stmt() {
   Node *node;
 
-  if(token->kind == TK_RETURN) {
-    token = token->next;
+  if (consume_kind(TK_RETURN)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr();
+    if (!consume(";"))
+      error_at(token->str, "';'ではないトークンです");
+  } else if (consume_kind(TK_IF)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_IF;
+    expect("(");
+    node->lhs = expr(); // cond
+    expect(")");
+    node->rhs = stmt(); // then
+    if (consume_kind(TK_ELSE)) {
+      node->else_stmt = stmt(); // else
+    }
+  } else if (consume_kind(TK_WHILE)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_WHILE;
+    expect("(");
+    node->lhs = expr(); // cond
+    expect(")");
+    node->rhs = stmt(); // body
+  } else if (consume_kind(TK_FOR)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_FOR;
+    expect("(");
+    if (!consume(";")) {
+      node->lhs = expr();
+      expect(";");
+    }
+    if (!consume(";")) {
+      node->rhs = expr();
+      expect(";");
+    }
+    if (!consume(")")) {
+      node->for_third = expr();
+      expect(")");
+    }
+    node->for_body = stmt();
   } else {
     node = expr();
+    if (!consume(";"))
+      error_at(token->str, "';'ではないトークンです");
   }
 
-  if (!consume(";"))
-    error_at(token->str, "';'ではないトークンです");
   return node;
 }
 
