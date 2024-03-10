@@ -91,12 +91,11 @@ void gen(Node *node) {
   case ND_BLOCK:
     for (int i = 0; i < node->nodes->len; i++) {
       gen(node->nodes->data[i]);
-      printf("  pop rax\n");
+      if (i != node->nodes->len - 1)
+        printf("  pop rax\n");
     }
     return;
   case ND_CALL:
-    if (node->lhs->kind != ND_LVAR)
-      error("関数名が不正です");
     for (int i = 0; i < node->nodes->len; i++) {
       gen(node->nodes->data[i]);
     }
@@ -121,7 +120,7 @@ void gen(Node *node) {
     printf("  and r10, 15\n");
     printf("  sub rsp, r10\n");
     printf("  push r10\n");
-    printf("  call %.*s\n", node->lhs->len, node->lhs->name);
+    printf("  call %.*s\n", node->len, node->name);
     printf("  pop r10\n");
     printf("  add rsp, r10\n");
     printf("  push rax\n");
@@ -134,6 +133,10 @@ void gen(Node *node) {
     printf("  pop rax\n");
     printf("  mov rax, [rax]\n");
     printf("  push rax\n");
+    return;
+  case ND_VARDEF:
+    // dummy
+    printf("  push 0\n");
     return;
   }
 
@@ -196,7 +199,7 @@ void gen_definition(Node *node) {
     printf("  mov rbp, rsp\n");
     for (int i = 0; i < node->nodes->len; i++) {
       Node *arg = node->nodes->data[i];
-      if (arg->kind != ND_LVAR)
+      if (arg->kind != ND_VARDEF)
         error("代入の左辺値が変数ではありません");
       printf("  mov rax, rbp\n");
       printf("  sub rax, %d\n", arg->offset);

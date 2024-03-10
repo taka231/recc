@@ -17,6 +17,9 @@ void print_node(Node *node) {
   case ND_LVAR:
     printf("%.*s\n", node->len, node->name);
     break;
+  case ND_VARDEF:
+    printf("int %.*s\n", node->len, node->name);
+    break;
   case ND_RETURN:
     printf("return ");
     print_node(node->lhs);
@@ -56,6 +59,12 @@ void print_node(Node *node) {
         printf(", ");
     }
     printf(")\n");
+    break;
+  case ND_ASSIGN:
+    print_node(node->lhs);
+    printf(" = ");
+    print_node(node->rhs);
+    printf("\n");
     break;
   }
   }
@@ -252,6 +261,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "int", 3) == 0 && !is_alnum(p[3])) {
+      cur = new_token(TK_INT, cur, p);
+      p += 3;
+      continue;
+    }
+
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p++);
       cur->len = 1;
@@ -284,29 +299,11 @@ Node *primary() {
   Token *tok = consume_ident();
   if (tok) {
     Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_LVAR;
 
-    LVar *lvar = find_lvar(tok);
-    if (lvar) {
-      node->offset = lvar->offset;
-      node->name = tok->str;
-      node->len = tok->len;
-    } else {
-      lvar = calloc(1, sizeof(LVar));
-      lvar->next = locals;
-      lvar->name = tok->str;
-      lvar->len = tok->len;
-      lvar->offset = locals ? locals->offset + 8 : 8;
-      node->offset = lvar->offset;
-      node->name = tok->str;
-      node->len = tok->len;
-      locals = lvar;
-    }
     if (consume("(")) {
-      Node *func = node;
-      node = calloc(1, sizeof(Node));
       node->kind = ND_CALL;
-      node->lhs = func;
+      node->name = tok->str;
+      node->len = tok->len;
       NodeArray *args = new_node_array();
       while (!consume(")")) {
         node_array_push(args, expr());
@@ -316,6 +313,17 @@ Node *primary() {
         }
       }
       node->nodes = args;
+      return node;
+    }
+
+    node->kind = ND_LVAR;
+    LVar *lvar = find_lvar(tok);
+    if (lvar) {
+      node->offset = lvar->offset;
+      node->name = tok->str;
+      node->len = tok->len;
+    } else {
+      error_at(tok->str, "定義されていない変数です");
     }
     return node;
   }
@@ -402,6 +410,27 @@ Node *assign() {
 
 Node *expr() { return assign(); }
 
+Node *vardef() {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_VARDEF;
+  Token *tok = consume_ident();
+  if (!tok)
+    error_at(token->str, "変数名がありません");
+  LVar *lvar = find_lvar(tok);
+  if (lvar)
+    error_at(tok->str, "変数が既に定義されています");
+  lvar = calloc(1, sizeof(LVar));
+  lvar->next = locals;
+  lvar->name = tok->str;
+  lvar->len = tok->len;
+  lvar->offset = locals ? locals->offset + 8 : 8;
+  locals = lvar;
+  node->offset = lvar->offset;
+  node->name = tok->str;
+  node->len = tok->len;
+  return node;
+}
+
 Node *stmt() {
   Node *node;
 
@@ -453,6 +482,9 @@ Node *stmt() {
       node_array_push(nodes, stmt());
     }
     node->nodes = nodes;
+  } else if (consume_kind(TK_INT)) {
+    node = vardef();
+    expect(";");
   } else {
     node = expr();
     if (!consume(";"))
@@ -464,6 +496,8 @@ Node *stmt() {
 
 Node *fundef() {
   locals = NULL;
+  if (!consume_kind(TK_INT))
+    error_at(token->str, "型が必要です");
   Token *tok = consume_ident();
   if (!tok)
     error_at(token->str, "関数名がありません");
@@ -474,9 +508,9 @@ Node *fundef() {
   node->len = tok->len;
   NodeArray *args = new_node_array();
   while (!consume(")")) {
-    Node *arg = primary();
-    if (arg->kind != ND_LVAR)
-      error_at(token->str, "不適切な引数です");
+    if (!consume_kind(TK_INT))
+      error_at(token->str, "型が必要です");
+    Node *arg = vardef();
     node_array_push(args, arg);
     if (!consume(",")) {
       expect(")");

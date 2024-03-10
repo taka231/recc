@@ -9,6 +9,7 @@ typedef enum {
   TK_ELSE,     // else
   TK_WHILE,    // while
   TK_FOR,      // for
+  TK_INT,      // int
 } TokenKind;
 
 typedef struct Token Token;
@@ -46,6 +47,7 @@ typedef enum {
   ND_FOR,    // for
   ND_BLOCK,  // { ... }
   ND_CALL,   // 関数呼び出し
+  ND_VARDEF, // 変数定義
   ND_FUNDEF  // 関数定義
 } NodeKind;
 
