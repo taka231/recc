@@ -174,5 +174,19 @@ main() {
 }
 '
 
+assert 3 '
+main() {
+  x = 3;
+  y = &x;
+  return *y;
+}'
+
+assert 3 '
+main() {
+  x = 3;
+  y = &x;
+  z = &y;
+  return **z;
+}'
 
 echo OK
