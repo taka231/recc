@@ -89,11 +89,6 @@ void gen(Node *node) {
     return;
   }
   case ND_BLOCK:
-    // while (node->next) {
-    //   node = node->next;
-    //   gen(node);
-    //   printf("  pop rax\n");
-    // }
     for (int i = 0; i < node->nodes->len; i++) {
       gen(node->nodes->data[i]);
       printf("  pop rax\n");
@@ -120,10 +115,16 @@ void gen(Node *node) {
         printf("  pop r9\n");
     }
     printf("  mov rax, %d\n", node->nodes->len);
-    printf(".Lcall%d:\n", labelseq);
+    // 16バイト境界に合うようにスタックを調整
+    printf("  mov r10, rsp\n");
+    printf("  sub r10, 8\n");
+    printf("  and r10, 15\n");
+    printf("  sub rsp, r10\n");
+    printf("  push r10\n");
     printf("  call %.*s\n", node->lhs->len, node->lhs->name);
+    printf("  pop r10\n");
+    printf("  add rsp, r10\n");
     printf("  push rax\n");
-    labelseq++;
     return;
   }
 
