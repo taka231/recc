@@ -43,25 +43,31 @@ typedef enum {
   ND_WHILE,  // while
   ND_FOR,    // for
   ND_BLOCK,  // { ... }
-  ND_CALL   // 関数呼び出し
+  ND_CALL,   // 関数呼び出し
+  ND_FUNDEF  // 関数定義
 } NodeKind;
 
 typedef struct Node Node;
 
+typedef struct NodeArray {
+  int len;
+  int capacity;
+  Node **data;
+} NodeArray;
+
 // 抽象構文木のノードの型
 struct Node {
-  NodeKind kind; // ノードの型
-  Node *lhs;     // 左辺
-  Node *rhs;     // 右辺
+  NodeKind kind;   // ノードの型
+  Node *lhs;       // 左辺
+  Node *rhs;       // 右辺
   Node *else_stmt; // else
   Node *for_third; // forの条件部の3番目の式
   Node *for_body;  // for
-  Node *next;      // 次の文 or 引数
-  int val;       // kindがND_NUMの場合のみ使う
-  int offset;    // kindがND_LVARの場合のみ使う
+  int val;         // kindがND_NUMの場合のみ使う
+  int offset;      // kindがND_LVARの場合のみ使う
   char *name;
   int len;
-  int arg_num;   // 引数の個数
+  NodeArray *nodes; // ND_BLOCK or ND_FUNDEF or ND_CALL
 };
 
 extern Node *code[100];
@@ -87,9 +93,12 @@ extern char *user_input;
 
 void error(char *fmt, ...);
 
-void gen(Node *node);
+void gen_definition(Node *node);
 
 // 入力文字列pをトークナイズしてそれを返す
 Token *tokenize(char *p);
 
 void program();
+
+// debug
+void print_node(Node *node);

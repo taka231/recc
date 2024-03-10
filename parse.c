@@ -6,6 +6,61 @@
 #include <stdlib.h>
 #include <string.h>
 
+// debug
+void print_node(Node *node) {
+  if (!node)
+    return;
+  switch (node->kind) {
+  case ND_NUM:
+    printf("%d\n", node->val);
+    break;
+  case ND_LVAR:
+    printf("%.*s\n", node->len, node->name);
+    break;
+  case ND_RETURN:
+    printf("return ");
+    print_node(node->lhs);
+    printf("\n");
+    break;
+  case ND_IF:
+    printf("if\n");
+    break;
+  case ND_WHILE:
+    printf("while\n");
+    break;
+  case ND_FOR:
+    printf("for\n");
+    break;
+  case ND_BLOCK:
+    printf("{\n");
+    for (int i = 0; i < node->nodes->len; i++)
+      print_node(node->nodes->data[i]);
+    printf("}\n");
+    break;
+  case ND_FUNDEF: {
+    printf("%.*s(", node->len, node->name);
+    for (int i = 0; i < node->nodes->len; i++) {
+      print_node(node->nodes->data[i]);
+      if (i != node->nodes->len - 1)
+        printf(", ");
+    }
+    printf(")\n");
+    print_node(node->rhs);
+    break;
+  }
+  case ND_CALL: {
+    printf("%.*s(", node->lhs->len, node->lhs->name);
+    for (int i = 0; i < node->nodes->len; i++) {
+      print_node(node->nodes->data[i]);
+      if (i != node->nodes->len - 1)
+        printf(", ");
+    }
+    printf(")\n");
+    break;
+  }
+  }
+}
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
@@ -19,6 +74,22 @@ Node *new_node_num(int val) {
   node->kind = ND_NUM;
   node->val = val;
   return node;
+}
+
+NodeArray *new_node_array() {
+  NodeArray *array = calloc(1, sizeof(NodeArray));
+  array->data = calloc(100, sizeof(Node *));
+  array->capacity = 100;
+  array->len = 0;
+  return array;
+}
+
+void node_array_push(NodeArray *array, Node *node) {
+  if (array->len == array->capacity) {
+    array->capacity *= 2;
+    array->data = realloc(array->data, sizeof(Node *) * array->capacity);
+  }
+  array->data[array->len++] = node;
 }
 
 // エラーを報告するための関数
@@ -218,6 +289,8 @@ Node *primary() {
     LVar *lvar = find_lvar(tok);
     if (lvar) {
       node->offset = lvar->offset;
+      node->name = tok->str;
+      node->len = tok->len;
     } else {
       lvar = calloc(1, sizeof(LVar));
       lvar->next = locals;
@@ -234,17 +307,15 @@ Node *primary() {
       node = calloc(1, sizeof(Node));
       node->kind = ND_CALL;
       node->lhs = func;
-      node->arg_num = 0;
-      Node **cur = &node->next;
+      NodeArray *args = new_node_array();
       while (!consume(")")) {
-        *cur = expr();
-        node->arg_num++;
-        cur = &(*cur)->next;
+        node_array_push(args, expr());
         if (!consume(",")) {
           expect(")");
           break;
         }
       }
+      node->nodes = args;
     }
     return node;
   }
@@ -373,11 +444,11 @@ Node *stmt() {
   } else if (consume("{")) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_BLOCK;
-    Node **head = &node->next;
+    NodeArray *nodes = new_node_array();
     while (!consume("}")) {
-      *head = stmt();
-      head = &(*head)->next;
+      node_array_push(nodes, stmt());
     }
+    node->nodes = nodes;
   } else {
     node = expr();
     if (!consume(";"))
@@ -387,10 +458,42 @@ Node *stmt() {
   return node;
 }
 
+Node *fundef() {
+  locals = NULL;
+  Token *tok = consume_ident();
+  if (!tok)
+    error_at(token->str, "関数名がありません");
+  expect("(");
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_FUNDEF;
+  node->name = tok->str;
+  node->len = tok->len;
+  NodeArray *args = new_node_array();
+  while (!consume(")")) {
+    Node *arg = primary();
+    if (arg->kind != ND_LVAR)
+      error_at(token->str, "不適切な引数です");
+    node_array_push(args, arg);
+    if (!consume(",")) {
+      expect(")");
+      break;
+    }
+  }
+  node->nodes = args;
+  node->rhs = stmt();
+  if (node->rhs->kind != ND_BLOCK)
+    error_at(token->str, "関数定義が不適切です");
+  int offset = locals ? locals->offset : 0;
+  if (offset % 16)
+    offset += 8;
+  node->offset = offset;
+  return node;
+}
+
 void program() {
   int i = 0;
   while (!at_eof()) {
-    code[i++] = stmt();
+    code[i++] = fundef();
   }
   code[i] = NULL;
 }

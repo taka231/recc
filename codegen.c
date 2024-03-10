@@ -89,18 +89,23 @@ void gen(Node *node) {
     return;
   }
   case ND_BLOCK:
-    while (node->next) {
-      node = node->next;
-      gen(node);
+    // while (node->next) {
+    //   node = node->next;
+    //   gen(node);
+    //   printf("  pop rax\n");
+    // }
+    for (int i = 0; i < node->nodes->len; i++) {
+      gen(node->nodes->data[i]);
       printf("  pop rax\n");
     }
     return;
   case ND_CALL:
     if (node->lhs->kind != ND_LVAR)
       error("関数名が不正です");
-    Node *arg = node->next;
-    for (int i = 0; i < node->arg_num; i++) {
-      gen(arg);
+    for (int i = 0; i < node->nodes->len; i++) {
+      gen(node->nodes->data[i]);
+    }
+    for (int i = node->nodes->len - 1; i >= 0; i--) {
       if (i == 0)
         printf("  pop rdi\n");
       else if (i == 1)
@@ -113,15 +118,8 @@ void gen(Node *node) {
         printf("  pop r8\n");
       else if (i == 5)
         printf("  pop r9\n");
-      arg = arg->next;
     }
-    printf("  mov rax, %d\n", node->arg_num);
-    // RSPを16の倍数にする
-    printf("  mov r10, rsp\n");
-    printf("  and r10, 15\n");
-    printf("  jz .Lcall%d\n", labelseq);
-    printf("  sub rsp, r10\n");
-
+    printf("  mov rax, %d\n", node->nodes->len);
     printf(".Lcall%d:\n", labelseq);
     printf("  call %.*s\n", node->lhs->len, node->lhs->name);
     printf("  push rax\n");
@@ -172,4 +170,50 @@ void gen(Node *node) {
   }
 
   printf("  push rax\n");
+}
+
+// 関数定義等のコードを生成
+void gen_definition(Node *node) {
+  switch (node->kind) {
+  case ND_FUNDEF: {
+    // 関数のプロローグ
+    // アセンブリの前半部分を出力
+    printf(".globl %.*s\n", node->len, node->name);
+    printf("%.*s:\n", node->len, node->name);
+
+    // プロローグ
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    for (int i = 0; i < node->nodes->len; i++) {
+      Node *arg = node->nodes->data[i];
+      if (arg->kind != ND_LVAR)
+        error("代入の左辺値が変数ではありません");
+      printf("  mov rax, rbp\n");
+      printf("  sub rax, %d\n", arg->offset);
+      if (i == 0)
+        printf("  mov [rax], rdi\n");
+      else if (i == 1)
+        printf("  mov [rax], rsi\n");
+      else if (i == 2)
+        printf("  mov [rax], rdx\n");
+      else if (i == 3)
+        printf("  mov [rax], rcx\n");
+      else if (i == 4)
+        printf("  mov [rax], r8\n");
+      else if (i == 5)
+        printf("  mov [rax], r9\n");
+    }
+    printf("  mov rsp, rbp\n");
+    printf("  sub rsp, %d\n", node->offset);
+    // 関数の本体
+    gen(node->rhs);
+    printf("  pop rax\n");
+
+    // エピローグ
+    // 最後の式の結果がRAXに残っているのでそれが返り値になる
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    printf("  ret\n");
+  }
+  }
 }
