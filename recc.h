@@ -43,6 +43,7 @@ typedef enum {
   ND_WHILE,  // while
   ND_FOR,    // for
   ND_BLOCK,  // { ... }
+  ND_CALL   // 関数呼び出し
 } NodeKind;
 
 typedef struct Node Node;
@@ -55,9 +56,12 @@ struct Node {
   Node *else_stmt; // else
   Node *for_third; // forの条件部の3番目の式
   Node *for_body;  // for
-  Node *next;      // 次の文
+  Node *next;      // 次の文 or 引数
   int val;       // kindがND_NUMの場合のみ使う
   int offset;    // kindがND_LVARの場合のみ使う
+  char *name;
+  int len;
+  int arg_num;   // 引数の個数
 };
 
 extern Node *code[100];

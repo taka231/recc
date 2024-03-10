@@ -95,6 +95,38 @@ void gen(Node *node) {
       printf("  pop rax\n");
     }
     return;
+  case ND_CALL:
+    if (node->lhs->kind != ND_LVAR)
+      error("関数名が不正です");
+    Node *arg = node->next;
+    for (int i = 0; i < node->arg_num; i++) {
+      gen(arg);
+      if (i == 0)
+        printf("  pop rdi\n");
+      else if (i == 1)
+        printf("  pop rsi\n");
+      else if (i == 2)
+        printf("  pop rdx\n");
+      else if (i == 3)
+        printf("  pop rcx\n");
+      else if (i == 4)
+        printf("  pop r8\n");
+      else if (i == 5)
+        printf("  pop r9\n");
+      arg = arg->next;
+    }
+    printf("  mov rax, %d\n", node->arg_num);
+    // RSPを16の倍数にする
+    printf("  mov r10, rsp\n");
+    printf("  and r10, 15\n");
+    printf("  jz .Lcall%d\n", labelseq);
+    printf("  sub rsp, r10\n");
+
+    printf(".Lcall%d:\n", labelseq);
+    printf("  call %.*s\n", node->lhs->len, node->lhs->name);
+    printf("  push rax\n");
+    labelseq++;
+    return;
   }
 
   gen(node->lhs);

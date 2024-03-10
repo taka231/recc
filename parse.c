@@ -139,7 +139,7 @@ Token *tokenize(char *p) {
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
         *p == ')' || *p == '>' || *p == '<' || *p == '=' || *p == ';' ||
-        *p == '{' || *p == '}') {
+        *p == '{' || *p == '}' || *p == ',') {
       cur = new_token(TK_RESERVED, cur, p++);
       cur->len = 1;
       continue;
@@ -225,7 +225,26 @@ Node *primary() {
       lvar->len = tok->len;
       lvar->offset = locals ? locals->offset + 8 : 8;
       node->offset = lvar->offset;
+      node->name = tok->str;
+      node->len = tok->len;
       locals = lvar;
+    }
+    if (consume("(")) {
+      Node *func = node;
+      node = calloc(1, sizeof(Node));
+      node->kind = ND_CALL;
+      node->lhs = func;
+      node->arg_num = 0;
+      Node **cur = &node->next;
+      while (!consume(")")) {
+        *cur = expr();
+        node->arg_num++;
+        cur = &(*cur)->next;
+        if (!consume(",")) {
+          expect(")");
+          break;
+        }
+      }
     }
     return node;
   }
