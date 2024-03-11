@@ -1,3 +1,4 @@
+#include <stdio.h>
 // トークンの種類
 typedef enum {
   TK_RESERVED, // 記号
@@ -30,8 +31,9 @@ extern Token *token;
 typedef struct Type Type;
 
 struct Type {
-  enum { INT, PTR } ty;
+  enum { INT, PTR, ARRAY } ty;
   Type *ptr_to;
+  size_t array_size;
 };
 
 int size_of(Type *type);

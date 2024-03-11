@@ -255,4 +255,26 @@ int main() {
   return sizeof(1);
 }'
 
+assert 40 '
+int main() {
+  int x[10];
+  return sizeof(x);
+}'
+
+assert 200 '
+int main() {
+  int x[5][10];
+  return sizeof(x);
+}'
+
+assert 3 '
+int main() {
+  int a[2];
+  *a = 1;
+  *(a + 1) = 2;
+  int *p;
+  p = a;
+  return *p + *(p + 1);
+}'
+
 echo OK

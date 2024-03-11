@@ -83,12 +83,22 @@ Type *pointer_to(Type *base) {
   return type;
 }
 
+Type *array_type(Type *base, size_t size) {
+  Type *type = calloc(1, sizeof(Type));
+  type->ty = ARRAY;
+  type->ptr_to = base;
+  type->array_size = size;
+  return type;
+}
+
 int size_of(Type *type) {
   switch (type->ty) {
   case INT:
     return 4;
   case PTR:
     return 8;
+  case ARRAY:
+    return size_of(type->ptr_to) * type->array_size;
   default:
     error("サイズが取得できません");
   }
@@ -106,12 +116,19 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     node->type = pointer_to(lhs->type);
     break;
   case ND_DEREF:
-    if (lhs->type->ty != PTR)
+    if (lhs->type->ty != PTR && lhs->type->ty != ARRAY)
       error_at(lhs->name, "ポインタではありません");
     node->type = lhs->type->ptr_to;
     break;
   default:
-    node->type = lhs->type;
+    if (lhs->type->ty == ARRAY)
+      node->type = pointer_to(lhs->type->ptr_to);
+    else if (rhs && rhs->type->ty == ARRAY)
+      node->type = pointer_to(rhs->type->ptr_to);
+    else if (rhs && rhs->type->ty == PTR)
+      node->type = rhs->type;
+    else
+      node->type = lhs->type;
   }
   return node;
 }
@@ -258,7 +275,8 @@ Token *tokenize(char *p) {
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
         *p == ')' || *p == '>' || *p == '<' || *p == '=' || *p == ';' ||
-        *p == '{' || *p == '}' || *p == ',' || *p == '&') {
+        *p == '{' || *p == '}' || *p == ',' || *p == '&' || *p == '[' ||
+        *p == ']') {
       cur = new_token(TK_RESERVED, cur, p++);
       cur->len = 1;
       continue;
@@ -479,6 +497,11 @@ Node *vardef() {
   Token *tok = consume_ident();
   if (!tok)
     error_at(token->str, "変数名がありません");
+  while (consume("[")) {
+    int size = expect_number();
+    expect("]");
+    ty = array_type(ty, size);
+  }
   LVar *lvar = find_lvar(tok);
   if (lvar)
     error_at(tok->str, "変数が既に定義されています");
@@ -486,7 +509,9 @@ Node *vardef() {
   lvar->next = locals;
   lvar->name = tok->str;
   lvar->len = tok->len;
-  lvar->offset = locals ? locals->offset + 8 : 8;
+  lvar->offset = locals ? locals->offset + size_of(locals->type) +
+                              size_of(locals->type) % 8
+                        : 8;
   lvar->type = ty;
   locals = lvar;
   node->offset = lvar->offset;
