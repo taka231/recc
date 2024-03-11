@@ -277,4 +277,25 @@ int main() {
   return *p + *(p + 1);
 }'
 
+assert 40 '
+int main() {
+  int x[5][10];
+  return sizeof(x[0]);
+}'
+
+assert 3 '
+int main() {
+  int x[2];
+  x[0] = 1;
+  x[1] = 2;
+  return x[0] + x[1];
+}'
+
+assert 1 '
+int main() {
+  int x[2];
+  0[x] = 1;
+  return x[0];
+}'
+
 echo OK

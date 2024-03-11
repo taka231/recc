@@ -397,11 +397,21 @@ Node *primary() {
   return new_node_num(expect_number());
 }
 
+Node *unary_after() {
+  Node *node = primary();
+  while (consume("[")) {
+    Node *index = expr();
+    expect("]");
+    node = new_node(ND_DEREF, new_node(ND_ADD, node, index), NULL);
+  }
+  return node;
+}
+
 Node *unary() {
   if (consume("+"))
-    return primary();
+    return unary_after();
   if (consume("-"))
-    return new_node(ND_SUB, new_node_num(0), primary());
+    return new_node(ND_SUB, new_node_num(0), unary_after());
   if (consume("&"))
     return new_node(ND_ADDR, unary(), NULL);
   if (consume("*"))
@@ -410,7 +420,7 @@ Node *unary() {
     Node *node = unary();
     return new_node_num(size_of(node->type));
   }
-  return primary();
+  return unary_after();
 }
 
 Node *mul() {
@@ -497,10 +507,14 @@ Node *vardef() {
   Token *tok = consume_ident();
   if (!tok)
     error_at(token->str, "変数名がありません");
+  int size[20];
+  int i = 0;
   while (consume("[")) {
-    int size = expect_number();
+    size[i++] = expect_number();
     expect("]");
-    ty = array_type(ty, size);
+  }
+  for (int j = i - 1; j >= 0; j--) {
+    ty = array_type(ty, size[j]);
   }
   LVar *lvar = find_lvar(tok);
   if (lvar)

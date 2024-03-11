@@ -159,14 +159,22 @@ void gen(Node *node) {
 
   switch (node->kind) {
   case ND_ADD:
-    if (node->type->ty == PTR)
-      printf("  imul rdi, %d\n", size_of(node->type->ptr_to));
+    if (node->type->ty == PTR) {
+      if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
+        printf("  imul rdi, %d\n", size_of(node->type->ptr_to));
+      else
+        printf("  imul rax, %d\n", size_of(node->type->ptr_to));
+    }
 
     printf("  add rax, rdi\n");
     break;
   case ND_SUB:
-    if (node->type->ty == PTR)
-      printf("  imul rdi, %d\n", size_of(node->type->ptr_to));
+    if (node->type->ty == PTR) {
+      if (node->lhs->type->ty == PTR || node->lhs->type->ty == ARRAY)
+        printf("  imul rdi, %d\n", size_of(node->type->ptr_to));
+      else
+        printf("  imul rax, %d\n", size_of(node->type->ptr_to));
+    }
 
     printf("  sub rax, rdi\n");
     break;
