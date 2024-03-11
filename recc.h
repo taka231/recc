@@ -10,6 +10,7 @@ typedef enum {
   TK_WHILE,    // while
   TK_FOR,      // for
   TK_INT,      // int
+  TK_SIZEOF,   // sizeof
 } TokenKind;
 
 typedef struct Token Token;
@@ -32,6 +33,8 @@ struct Type {
   enum { INT, PTR } ty;
   Type *ptr_to;
 };
+
+int size_of(Type *type);
 
 // 抽象構文木のノードの種類
 typedef enum {

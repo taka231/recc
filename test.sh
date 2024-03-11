@@ -232,4 +232,27 @@ int main() {
 }
 '
 
+assert 4 '
+int main() {
+  int x;
+  return sizeof(x);
+}'
+
+assert 8 '
+int main() {
+  int *x;
+  return sizeof(x);
+}'
+
+assert 4 '
+int main() {
+  int *x;
+  return sizeof(*x);
+}'
+
+assert 4 '
+int main() {
+  return sizeof(1);
+}'
+
 echo OK

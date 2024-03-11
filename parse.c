@@ -83,6 +83,17 @@ Type *pointer_to(Type *base) {
   return type;
 }
 
+int size_of(Type *type) {
+  switch (type->ty) {
+  case INT:
+    return 4;
+  case PTR:
+    return 8;
+  default:
+    error("サイズが取得できません");
+  }
+}
+
 void error_at(char *loc, char *fmt, ...);
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
@@ -295,6 +306,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
+      cur = new_token(TK_SIZEOF, cur, p);
+      p += 6;
+      continue;
+    }
+
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p++);
       cur->len = 1;
@@ -371,6 +388,10 @@ Node *unary() {
     return new_node(ND_ADDR, unary(), NULL);
   if (consume("*"))
     return new_node(ND_DEREF, unary(), NULL);
+  if (consume_kind(TK_SIZEOF)) {
+    Node *node = unary();
+    return new_node_num(size_of(node->type));
+  }
   return primary();
 }
 
