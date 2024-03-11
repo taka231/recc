@@ -12,6 +12,10 @@ void gen_lval(Node *node) {
     printf("  sub rax, %d\n", node->offset);
     printf("  push rax\n");
     return;
+  case ND_GVAR:
+    printf("  lea rax, %.*s[rip]\n", node->len, node->name);
+    printf("  push rax\n");
+    return;
   case ND_DEREF:
     gen(node->lhs);
     return;
@@ -24,6 +28,7 @@ void gen(Node *node) {
     printf("  push %d\n", node->val);
     return;
   case ND_LVAR:
+  case ND_GVAR:
     if (node->type->ty == ARRAY) {
       gen_lval(node);
       return;
@@ -216,6 +221,7 @@ void gen_definition(Node *node) {
   case ND_FUNDEF: {
     // 関数のプロローグ
     // アセンブリの前半部分を出力
+    printf(".text\n");
     printf(".globl %.*s\n", node->len, node->name);
     printf("%.*s:\n", node->len, node->name);
 
@@ -252,6 +258,13 @@ void gen_definition(Node *node) {
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     printf("  ret\n");
+    return;
   }
+  case ND_VARDEF:
+    printf(".bss\n");
+    printf(".globl %.*s\n", node->len, node->name);
+    printf("%.*s:\n", node->len, node->name);
+    printf("  .zero %d\n", size_of(node->type));
+    return;
   }
 }

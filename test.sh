@@ -4,7 +4,7 @@ assert() {
   input="$2"
 
   ./recc "$input" > tmp.s
-  cc -o tmp tmp.s test_alloc4.o
+  cc -o tmp tmp.s
   ./tmp
   actual="$?"
 
@@ -212,28 +212,6 @@ int main() {
 
 assert 4 '
 int main() {
-  int *p;
-  alloc4(&p, 1, 2, 4, 8);
-  int *q;
-  q = p + 2;
-  return *q;
-}
-'
-
-assert 8 '
-int main() {
-  int *p;
-  alloc4(&p, 1, 2, 4, 8);
-  int *q;
-  q = p + 2;
-  *q;
-  q = q + 1;
-  return *q;
-}
-'
-
-assert 4 '
-int main() {
   int x;
   return sizeof(x);
 }'
@@ -296,6 +274,54 @@ int main() {
   int x[2];
   0[x] = 1;
   return x[0];
+}'
+
+assert 2 '
+int x;
+int main() {
+  x = 2;
+  return x;
+}'
+
+assert 2 '
+int x;
+int foo() {
+  x = 2;
+}
+int main() {
+  foo();
+  return x;
+}
+'
+
+assert 3 '
+int x;
+int foo() {
+  x = 2;
+}
+int main() {
+  foo();
+  int x;
+  x = 3;
+  return x;
+}'
+
+assert 10 '
+int foo[4];
+int bar() {
+  int i;
+  for(i = 0; i < 4 ; i = i + 1)
+    foo[i] = i + 1;
+}
+
+int main() {
+  bar();
+  int i;
+  int sum;
+  sum = 0;
+  for(i = 0; i < 4 ; i = i + 1)
+    sum = sum + foo[i];
+  return sum;
 }'
 
 echo OK

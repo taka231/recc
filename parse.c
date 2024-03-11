@@ -243,6 +243,28 @@ LVar *find_lvar(Token *tok) {
   return NULL;
 }
 
+LVar *globals;
+
+LVar *find_gvar(Token *tok) {
+  for (LVar *var = globals; var; var = var->next) {
+    if (var->len == tok->len && !memcmp(tok->str, var->name, var->len)) {
+      return var;
+    }
+  }
+  return NULL;
+}
+
+LVar *funtypes;
+
+Type *get_funtype(Token *tok) {
+  for (LVar *var = funtypes; var; var = var->next) {
+    if (var->len == tok->len && !memcmp(tok->str, var->name, var->len)) {
+      return var->type;
+    }
+  }
+  return NULL;
+}
+
 // 新しいトークンを作成してcurに繋げる
 Token *new_token(TokenKind kind, Token *cur, char *str) {
   Token *tok = calloc(1, sizeof(Token));
@@ -376,7 +398,10 @@ Node *primary() {
         }
       }
       node->nodes = args;
-      node->type = int_type();
+      Type *type = get_funtype(tok);
+      if (!type)
+        error_at(tok->str, "関数が定義されていません");
+      node->type = type;
       return node;
     }
 
@@ -388,7 +413,14 @@ Node *primary() {
       node->len = tok->len;
       node->type = lvar->type;
     } else {
-      error_at(tok->str, "定義されていない変数です");
+      LVar *gvar = find_gvar(tok);
+      if (gvar) {
+        node->kind = ND_GVAR;
+        node->name = tok->str;
+        node->len = tok->len;
+        node->type = gvar->type;
+      } else
+        error_at(tok->str, "定義されていない変数です");
     }
     return node;
   }
@@ -599,34 +631,50 @@ Node *stmt() {
 }
 
 Node *fundef() {
-  locals = NULL;
-  if (!consume_kind(TK_INT))
-    error_at(token->str, "型が必要です");
-  Token *tok = consume_ident();
-  if (!tok)
-    error_at(token->str, "関数名がありません");
-  expect("(");
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_FUNDEF;
-  node->name = tok->str;
-  node->len = tok->len;
-  NodeArray *args = new_node_array();
-  while (!consume(")")) {
-    Node *arg = vardef();
-    node_array_push(args, arg);
-    if (!consume(",")) {
-      expect(")");
-      break;
+  Node *node = vardef();
+  // 関数定義
+  if (consume("(")) {
+    locals = NULL;
+    LVar *funtype = calloc(1, sizeof(LVar));
+    funtype->next = funtypes;
+    funtype->name = node->name;
+    funtype->len = node->len;
+    funtype->type = node->type;
+    funtypes = funtype;
+    node->kind = ND_FUNDEF;
+    NodeArray *args = new_node_array();
+    while (!consume(")")) {
+      Node *arg = vardef();
+      node_array_push(args, arg);
+      if (!consume(",")) {
+        expect(")");
+        break;
+      }
     }
+    node->nodes = args;
+    node->rhs = stmt();
+    if (node->rhs->kind != ND_BLOCK)
+      error_at(token->str, "関数定義が不適切です");
+    int offset = locals ? locals->offset : 0;
+    if (offset % 16)
+      offset += 8;
+    node->offset = offset;
+  } else {
+    Token *tok = calloc(1, sizeof(Token));
+    tok->kind = TK_IDENT;
+    tok->str = node->name;
+    tok->len = node->len;
+    LVar *gvar = find_gvar(tok);
+    if (gvar)
+      error_at(node->name, "グローバル変数が既に定義されています");
+    gvar = calloc(1, sizeof(LVar));
+    gvar->next = globals;
+    gvar->name = node->name;
+    gvar->len = node->len;
+    gvar->type = node->type;
+    globals = gvar;
+    expect(";");
   }
-  node->nodes = args;
-  node->rhs = stmt();
-  if (node->rhs->kind != ND_BLOCK)
-    error_at(token->str, "関数定義が不適切です");
-  int offset = locals ? locals->offset : 0;
-  if (offset % 16)
-    offset += 8;
-  node->offset = offset;
   return node;
 }
 

@@ -52,6 +52,7 @@ typedef enum {
   ND_ADDR,   // &
   ND_DEREF,  // *
   ND_LVAR,   // ローカル変数
+  ND_GVAR,   // グローバル変数
   ND_RETURN, // return
   ND_NUM,    // 整数
   ND_IF,     // if
@@ -102,6 +103,12 @@ struct LVar {
 
 // ローカル変数
 extern LVar *locals;
+
+// グローバル変数
+extern LVar *globals;
+
+// 関数の返り値の型のマップ
+extern LVar *funtypes;
 
 // 変数を名前で検索する。見つからなかった場合はNULLを返す。
 LVar *find_lvar(Token *tok);
