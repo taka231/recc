@@ -35,7 +35,10 @@ void gen(Node *node) {
     }
     gen_lval(node);
     printf("  pop rax\n");
-    printf("  mov rax, [rax]\n");
+    if (node->type->ty == CHAR)
+      printf("  movsx rax, byte ptr [rax]\n");
+    else
+      printf("  mov rax, [rax]\n");
     printf("  push rax\n");
     return;
   case ND_ASSIGN:
@@ -44,7 +47,10 @@ void gen(Node *node) {
 
     printf("  pop rdi\n");
     printf("  pop rax\n");
-    printf("  mov [rax], rdi\n");
+    if (node->lhs->type->ty == CHAR)
+      printf("  mov [rax], dil\n");
+    else
+      printf("  mov [rax], rdi\n");
     printf("  push rdi\n");
     return;
   case ND_RETURN:
@@ -147,7 +153,10 @@ void gen(Node *node) {
   case ND_DEREF:
     gen(node->lhs);
     printf("  pop rax\n");
-    printf("  mov rax, [rax]\n");
+    if (node->type->ty == CHAR)
+      printf("  movsx rax, byte ptr [rax]\n");
+    else
+      printf("  mov rax, [rax]\n");
     printf("  push rax\n");
     return;
   case ND_VARDEF:

@@ -76,6 +76,12 @@ Type *int_type() {
   return type;
 }
 
+Type *char_type() {
+  Type *type = calloc(1, sizeof(Type));
+  type->ty = CHAR;
+  return type;
+}
+
 Type *pointer_to(Type *base) {
   Type *type = calloc(1, sizeof(Type));
   type->ty = PTR;
@@ -95,6 +101,8 @@ int size_of(Type *type) {
   switch (type->ty) {
   case INT:
     return 4;
+  case CHAR:
+    return 1;
   case PTR:
     return 8;
   case ARRAY:
@@ -346,6 +354,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "char", 4) == 0 && !is_alnum(p[4])) {
+      cur = new_token(TK_CHAR, cur, p);
+      p += 4;
+      continue;
+    }
+
     if (strncmp(p, "sizeof", 6) == 0 && !is_alnum(p[6])) {
       cur = new_token(TK_SIZEOF, cur, p);
       p += 6;
@@ -525,9 +539,13 @@ Type *type() {
   Type *type;
   if (consume_kind(TK_INT)) {
     type = int_type();
-    while (consume("*")) {
-      type = pointer_to(type);
-    }
+  } else if (consume_kind(TK_CHAR)) {
+    type = char_type();
+  } else {
+    error_at(token->str, "型が不適切です");
+  }
+  while (consume("*")) {
+    type = pointer_to(type);
   }
   return type;
 }
@@ -556,7 +574,7 @@ Node *vardef() {
   lvar->name = tok->str;
   lvar->len = tok->len;
   lvar->offset = locals ? locals->offset + size_of(locals->type) +
-                              size_of(locals->type) % 8
+                              (8 - size_of(locals->type)) % 8
                         : 8;
   lvar->type = ty;
   locals = lvar;
@@ -618,7 +636,7 @@ Node *stmt() {
       node_array_push(nodes, stmt());
     }
     node->nodes = nodes;
-  } else if (token->kind == TK_INT) {
+  } else if (token->kind == TK_INT || token->kind == TK_CHAR) {
     node = vardef();
     expect(";");
   } else {
@@ -657,7 +675,7 @@ Node *fundef() {
       error_at(token->str, "関数定義が不適切です");
     int offset = locals ? locals->offset : 0;
     if (offset % 16)
-      offset += 8;
+      offset += 16 - offset % 16;
     node->offset = offset;
   } else {
     Token *tok = calloc(1, sizeof(Token));
