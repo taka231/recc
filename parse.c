@@ -70,11 +70,38 @@ void print_node(Node *node) {
   }
 }
 
+Type *int_type() {
+  Type *type = calloc(1, sizeof(Type));
+  type->ty = INT;
+  return type;
+}
+
+Type *pointer_to(Type *base) {
+  Type *type = calloc(1, sizeof(Type));
+  type->ty = PTR;
+  type->ptr_to = base;
+  return type;
+}
+
+void error_at(char *loc, char *fmt, ...);
+
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
   node->lhs = lhs;
   node->rhs = rhs;
+  switch (kind) {
+  case ND_ADDR:
+    node->type = pointer_to(lhs->type);
+    break;
+  case ND_DEREF:
+    if (lhs->type->ty != PTR)
+      error_at(lhs->name, "ポインタではありません");
+    node->type = lhs->type->ptr_to;
+    break;
+  default:
+    node->type = lhs->type;
+  }
   return node;
 }
 
@@ -82,6 +109,7 @@ Node *new_node_num(int val) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_NUM;
   node->val = val;
+  node->type = int_type();
   return node;
 }
 
@@ -313,6 +341,7 @@ Node *primary() {
         }
       }
       node->nodes = args;
+      node->type = int_type();
       return node;
     }
 
@@ -322,6 +351,7 @@ Node *primary() {
       node->offset = lvar->offset;
       node->name = tok->str;
       node->len = tok->len;
+      node->type = lvar->type;
     } else {
       error_at(tok->str, "定義されていない変数です");
     }
@@ -410,7 +440,19 @@ Node *assign() {
 
 Node *expr() { return assign(); }
 
+Type *type() {
+  Type *type;
+  if (consume_kind(TK_INT)) {
+    type = int_type();
+    while (consume("*")) {
+      type = pointer_to(type);
+    }
+  }
+  return type;
+}
+
 Node *vardef() {
+  Type *ty = type();
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_VARDEF;
   Token *tok = consume_ident();
@@ -424,10 +466,12 @@ Node *vardef() {
   lvar->name = tok->str;
   lvar->len = tok->len;
   lvar->offset = locals ? locals->offset + 8 : 8;
+  lvar->type = ty;
   locals = lvar;
   node->offset = lvar->offset;
   node->name = tok->str;
   node->len = tok->len;
+  node->type = ty;
   return node;
 }
 
@@ -482,7 +526,7 @@ Node *stmt() {
       node_array_push(nodes, stmt());
     }
     node->nodes = nodes;
-  } else if (consume_kind(TK_INT)) {
+  } else if (token->kind == TK_INT) {
     node = vardef();
     expect(";");
   } else {
@@ -508,8 +552,6 @@ Node *fundef() {
   node->len = tok->len;
   NodeArray *args = new_node_array();
   while (!consume(")")) {
-    if (!consume_kind(TK_INT))
-      error_at(token->str, "型が必要です");
     Node *arg = vardef();
     node_array_push(args, arg);
     if (!consume(",")) {

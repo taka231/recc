@@ -183,7 +183,7 @@ int main() {
 assert 3 '
 int main() {
   int x;
-  int y;
+  int *y;
   x = 3;
   y = &x;
   return *y;
@@ -192,12 +192,22 @@ int main() {
 assert 3 '
 int main() {
   int x;
-  int y;
-  int z;
+  int *y;
+  int **z;
   x = 3;
   y = &x;
   z = &y;
   return **z;
 }'
+
+assert 3 '
+int main() {
+  int x;
+  int *y;
+  y = &x;
+  *y = 3;
+  return x;
+}
+'
 
 echo OK

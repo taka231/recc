@@ -26,6 +26,13 @@ struct Token {
 // 現在着目しているトークン
 extern Token *token;
 
+typedef struct Type Type;
+
+struct Type {
+  enum { INT, PTR } ty;
+  Type *ptr_to;
+};
+
 // 抽象構文木のノードの種類
 typedef enum {
   ND_ADD,    // +
@@ -72,6 +79,7 @@ struct Node {
   char *name;
   int len;
   NodeArray *nodes; // ND_BLOCK or ND_FUNDEF or ND_CALL
+  Type *type;       //
 };
 
 extern Node *code[100];
@@ -84,6 +92,7 @@ struct LVar {
   char *name; // 変数の名前
   int len;    // 名前の長さ
   int offset; // RBPからのオフセット
+  Type *type; // 型
 };
 
 // ローカル変数
