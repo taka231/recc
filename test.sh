@@ -4,7 +4,7 @@ assert() {
   input="$2"
 
   ./recc "$input" > tmp.s
-  cc -o tmp tmp.s
+  cc -o tmp tmp.s test_alloc4.o
   ./tmp
   actual="$?"
 
@@ -207,6 +207,28 @@ int main() {
   y = &x;
   *y = 3;
   return x;
+}
+'
+
+assert 4 '
+int main() {
+  int *p;
+  alloc4(&p, 1, 2, 4, 8);
+  int *q;
+  q = p + 2;
+  return *q;
+}
+'
+
+assert 8 '
+int main() {
+  int *p;
+  alloc4(&p, 1, 2, 4, 8);
+  int *q;
+  q = p + 2;
+  *q;
+  q = q + 1;
+  return *q;
 }
 '
 
