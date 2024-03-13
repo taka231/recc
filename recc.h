@@ -1,18 +1,19 @@
 #include <stdio.h>
 // トークンの種類
 typedef enum {
-  TK_RESERVED, // 記号
-  TK_IDENT,    // 識別子
-  TK_NUM,      // 整数トークン
-  TK_EOF,      // 入力の終わりを表すトークン
-  TK_RETURN,   // return
-  TK_IF,       // if
-  TK_ELSE,     // else
-  TK_WHILE,    // while
-  TK_FOR,      // for
-  TK_INT,      // int
-  TK_CHAR,     // char
-  TK_SIZEOF,   // sizeof
+  TK_RESERVED,   // 記号
+  TK_IDENT,      // 識別子
+  TK_NUM,        // 整数トークン
+  TK_STRING_LIT, // 文字列リテラル
+  TK_EOF,        // 入力の終わりを表すトークン
+  TK_RETURN,     // return
+  TK_IF,         // if
+  TK_ELSE,       // else
+  TK_WHILE,      // while
+  TK_FOR,        // for
+  TK_INT,        // int
+  TK_CHAR,       // char
+  TK_SIZEOF,     // sizeof
 } TokenKind;
 
 typedef struct Token Token;
@@ -41,28 +42,29 @@ int size_of(Type *type);
 
 // 抽象構文木のノードの種類
 typedef enum {
-  ND_ADD,    // +
-  ND_SUB,    // -
-  ND_MUL,    // *
-  ND_DIV,    // /
-  ND_EQ,     // ==
-  ND_NE,     // !=
-  ND_LT,     // <
-  ND_LE,     // <=
-  ND_ASSIGN, // =
-  ND_ADDR,   // &
-  ND_DEREF,  // *
-  ND_LVAR,   // ローカル変数
-  ND_GVAR,   // グローバル変数
-  ND_RETURN, // return
-  ND_NUM,    // 整数
-  ND_IF,     // if
-  ND_WHILE,  // while
-  ND_FOR,    // for
-  ND_BLOCK,  // { ... }
-  ND_CALL,   // 関数呼び出し
-  ND_VARDEF, // 変数定義
-  ND_FUNDEF  // 関数定義
+  ND_ADD,        // +
+  ND_SUB,        // -
+  ND_MUL,        // *
+  ND_DIV,        // /
+  ND_EQ,         // ==
+  ND_NE,         // !=
+  ND_LT,         // <
+  ND_LE,         // <=
+  ND_ASSIGN,     // =
+  ND_ADDR,       // &
+  ND_DEREF,      // *
+  ND_LVAR,       // ローカル変数
+  ND_GVAR,       // グローバル変数
+  ND_RETURN,     // return
+  ND_NUM,        // 整数
+  ND_STRING_LIT, // 文字列リテラル
+  ND_IF,         // if
+  ND_WHILE,      // while
+  ND_FOR,        // for
+  ND_BLOCK,      // { ... }
+  ND_CALL,       // 関数呼び出し
+  ND_VARDEF,     // 変数定義
+  ND_FUNDEF      // 関数定義
 } NodeKind;
 
 typedef struct Node Node;
@@ -89,7 +91,10 @@ struct Node {
   Type *type;       //
 };
 
-extern Node *code[100];
+extern Node *code[10000];
+
+extern char *string_literals[10000];
+extern int string_literals_len;
 
 typedef struct LVar LVar;
 

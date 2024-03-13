@@ -26,6 +26,7 @@ assert 15 'int main() { return -3*5+30; }'
 assert 15 'int main() { return -3*-5; }'
 assert 2 'int main() { return 1+1; }'
 assert 1 'int main() { return 1==1; }'
+assert 1 'int main() { return 1-2 == -1; }'
 assert 1 'int main() { return 1!=2; }'
 assert 1 'int main() { return 1<=2; }'
 assert 0 'int main() { return 1>1; }'
@@ -333,5 +334,13 @@ int main() {
   y = 4;
   return x[0] + y;
 }'
+
+assert 97 '
+int main() {
+  char *p;
+  p = "a";
+  return p[0];
+}
+'
 
 echo OK

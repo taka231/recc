@@ -27,6 +27,10 @@ void gen(Node *node) {
   case ND_NUM:
     printf("  push %d\n", node->val);
     return;
+  case ND_STRING_LIT:
+    printf("  lea rax, .Lstr%d[rip]\n", node->val);
+    printf("  push rax\n");
+    return;
   case ND_LVAR:
   case ND_GVAR:
     if (node->type->ty == ARRAY) {
@@ -136,6 +140,7 @@ void gen(Node *node) {
         printf("  pop r9\n");
     }
     printf("  mov rax, %d\n", node->nodes->len);
+    printf("  mov al, 0\n");
     // 16バイト境界に合うようにスタックを調整
     printf("  mov r10, rsp\n");
     printf("  sub r10, 8\n");

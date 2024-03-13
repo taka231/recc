@@ -273,6 +273,18 @@ Type *get_funtype(Token *tok) {
   return NULL;
 }
 
+char *string_literals[10000];
+int string_literals_len = 0;
+
+int find_string_literal(char *str) {
+  for (int i = 0; i < string_literals_len; i++) {
+    if (!strcmp(string_literals[i], str))
+      return i;
+  }
+  string_literals[string_literals_len] = str;
+  return string_literals_len++;
+}
+
 // 新しいトークンを作成してcurに繋げる
 Token *new_token(TokenKind kind, Token *cur, char *str) {
   Token *tok = calloc(1, sizeof(Token));
@@ -291,6 +303,18 @@ Token *tokenize(char *p) {
   while (*p) {
     // 空白文字をスキップ
     if (isspace(*p)) {
+      p++;
+      continue;
+    }
+
+    if (*p == '"') {
+      p++;
+      cur = new_token(TK_STRING_LIT, cur, p);
+      cur->len = 0;
+      while (*p != '"') {
+        cur->len++;
+        p++;
+      }
       p++;
       continue;
     }
@@ -383,7 +407,7 @@ Token *tokenize(char *p) {
   return head.next;
 }
 
-Node *code[100];
+Node *code[10000];
 
 Node *expr();
 
@@ -392,6 +416,18 @@ Node *primary() {
   if (consume("(")) {
     Node *node = expr();
     expect(")");
+    return node;
+  }
+
+  if (token->kind == TK_STRING_LIT) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_STRING_LIT;
+    node->name = calloc(1, token->len + 1);
+    strncpy(node->name, token->str, token->len);
+    node->len = token->len;
+    node->val = find_string_literal(node->name);
+    node->type = pointer_to(char_type());
+    token = token->next;
     return node;
   }
 
@@ -414,7 +450,7 @@ Node *primary() {
       node->nodes = args;
       Type *type = get_funtype(tok);
       if (!type)
-        error_at(tok->str, "関数が定義されていません");
+        type = int_type();
       node->type = type;
       return node;
     }
