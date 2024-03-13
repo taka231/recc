@@ -3,6 +3,7 @@
 
 char *user_input;
 Token *token;
+char *filename;
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -11,7 +12,8 @@ int main(int argc, char **argv) {
   }
 
   // トークナイズしてパースする
-  user_input = argv[1];
+  filename = argv[1];
+  user_input = read_file(filename);
   token = tokenize(user_input);
   program();
 

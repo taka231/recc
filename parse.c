@@ -1,5 +1,6 @@
 #include "recc.h"
 #include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -70,6 +71,32 @@ void print_node(Node *node) {
   }
 }
 
+// 指定されたファイルの内容を返す
+char *read_file(char *path) {
+  // ファイルを開く
+  FILE *fp = fopen(path, "r");
+  if (!fp)
+    error("cannot open %s: %s", path, strerror(errno));
+
+  // ファイルの長さを調べる
+  if (fseek(fp, 0, SEEK_END) == -1)
+    error("%s: fseek: %s", path, strerror(errno));
+  size_t size = ftell(fp);
+  if (fseek(fp, 0, SEEK_SET) == -1)
+    error("%s: fseek: %s", path, strerror(errno));
+
+  // ファイル内容を読み込む
+  char *buf = calloc(1, size + 2);
+  fread(buf, size, 1, fp);
+
+  // ファイルが必ず"\n\0"で終わっているようにする
+  if (size == 0 || buf[size - 1] != '\n')
+    buf[size++] = '\n';
+  buf[size] = '\0';
+  fclose(fp);
+  return buf;
+}
+
 Type *int_type() {
   Type *type = calloc(1, sizeof(Type));
   type->ty = INT;
@@ -112,7 +139,7 @@ int size_of(Type *type) {
   }
 }
 
-void error_at(char *loc, char *fmt, ...);
+void error_at(char *loc, char *msg);
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
@@ -176,16 +203,30 @@ void error(char *fmt, ...) {
 }
 
 // エラー箇所を報告する
-void error_at(char *loc, char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
+void error_at(char *loc, char *msg) {
+  // locが含まれている行の開始地点と終了地点を取得
+  char *line = loc;
+  while (user_input < line && line[-1] != '\n')
+    line--;
 
-  int pos = loc - user_input;
-  fprintf(stderr, "%s\n", user_input);
-  fprintf(stderr, "%*s", pos, " "); // pos個の空白を出力
-  fprintf(stderr, "^ ");
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
+  char *end = loc;
+  while (*end != '\n')
+    end++;
+
+  // 見つかった行が全体の何行目なのかを調べる
+  int line_num = 1;
+  for (char *p = user_input; p < line; p++)
+    if (*p == '\n')
+      line_num++;
+
+  // 見つかった行を、ファイル名と行番号と一緒に表示
+  int indent = fprintf(stderr, "%s:%d: ", filename, line_num);
+  fprintf(stderr, "%.*s\n", (int)(end - line), line);
+
+  // エラー箇所を"^"で指し示して、エラーメッセージを表示
+  int pos = loc - line + indent;
+  fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
+  fprintf(stderr, "^ %s\n", msg);
   exit(1);
 }
 
@@ -218,8 +259,11 @@ Token *consume_ident() {
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
-      memcmp(token->str, op, token->len))
-    error_at(token->str, "'%c'ではありません", op);
+      memcmp(token->str, op, token->len)) {
+    char *msg = calloc(1, 100);
+    sprintf(msg, "'%s'ではありません", op);
+    error_at(token->str, msg);
+  }
   token = token->next;
 }
 

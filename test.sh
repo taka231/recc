@@ -3,10 +3,12 @@ assert() {
   expected="$1"
   input="$2"
 
-  ./recc "$input" > tmp.s
+  echo "$input" > tmp.c
+  ./recc tmp.c > tmp.s
   cc -o tmp tmp.s
   ./tmp
   actual="$?"
+  rm tmp.c
 
   if [ "$actual" = "$expected" ]; then
     echo "$input => $actual"

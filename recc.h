@@ -124,6 +124,10 @@ extern char *user_input;
 
 void error(char *fmt, ...);
 
+char *read_file(char *path);
+
+extern char *filename;
+
 void gen_definition(Node *node);
 
 // 入力文字列pをトークナイズしてそれを返す
