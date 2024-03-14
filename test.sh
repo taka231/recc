@@ -345,4 +345,21 @@ int main() {
 }
 '
 
+assert 10 '
+int main() {
+  int i; // comment
+  i = 10; // comment
+  return i; // comment
+}
+'
+
+assert 10 '
+int main() {
+  int i; /*
+  i = 20; */
+  i = 10;
+  return i;
+}
+'
+
 echo OK

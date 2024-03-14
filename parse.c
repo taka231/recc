@@ -351,6 +351,21 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "//", 2) == 0) {
+      p += 2;
+      while (*p != '\n')
+        p++;
+      continue;
+    }
+
+    if (strncmp(p, "/*", 2) == 0) {
+      p += 2;
+      while (strncmp(p, "*/", 2) != 0)
+        p++;
+      p += 2;
+      continue;
+    }
+
     if (*p == '"') {
       p++;
       cur = new_token(TK_STRING_LIT, cur, p);
