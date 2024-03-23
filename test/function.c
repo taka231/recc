@@ -31,6 +31,7 @@ int fib(int x) {
   return fib(x-1) + fib(x-2);
 }
 
+
 int main() {
   ASSERT(3, ret3());
   ASSERT(8, add2(3, 5));
@@ -39,6 +40,7 @@ int main() {
   ASSERT(66, add6(1,2,add6(3,4,5,6,7,8),9,10,11));
   ASSERT(136, add6(1,2,add6(3,add6(4,5,6,7,8,9),10,11,12,13),14,15,16));
 
+  ASSERT(7, ({int x[1]; *x = 4; addx(x, 3);}));
   ASSERT(7, add2(3,4));
   ASSERT(1, sub2(4,3));
   ASSERT(55, fib(9));
