@@ -1,5 +1,7 @@
 *~
 *.o
+*.s
+*.exe
 tmp*
 a.out
 recc

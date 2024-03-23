@@ -107,8 +107,17 @@ struct LVar {
   Type *type; // 型
 };
 
+typedef struct Scope Scope;
+
+struct Scope {
+  Scope *next;
+  LVar *locals;
+};
+
 // ローカル変数
-extern LVar *locals;
+extern Scope *locals;
+
+extern int next_offset;
 
 // グローバル変数
 extern LVar *globals;

@@ -66,29 +66,35 @@ void gen(Node *node) {
     return;
   case ND_IF: {
     int label = labelseq++;
+    printf("  push 0\n"); // dummy
     gen(node->lhs); // cond
     printf("  pop rax\n");
     printf("  cmp rax, 0\n");
     if (node->else_stmt) {
       printf("  je .Lelse%d\n", label);
       gen(node->rhs); // then
+      printf("  pop rax\n");
       printf("  jmp .Lend%d\n", label);
       printf(".Lelse%d:\n", label);
       gen(node->else_stmt); // else
+      printf("  pop rax\n");
     } else {
       printf("  je .Lend%d\n", label);
       gen(node->rhs); // then
+      printf("  pop rax\n");
     }
     printf(".Lend%d:\n", label);
     return;
   }
   case ND_WHILE: {
     int label = labelseq++;
+    printf("push 0\n"); // dummy
     printf(".Lbegin%d:\n", label);
     gen(node->lhs); // cond
     printf("  pop rax\n");
     printf("  cmp rax, 0\n");
     printf("  je .Lend%d\n", label);
+    printf("  pop rax\n");
     gen(node->rhs); // body
     printf("  jmp .Lbegin%d\n", label);
     printf(".Lend%d:\n", label);
@@ -96,8 +102,10 @@ void gen(Node *node) {
   }
   case ND_FOR: {
     int label = labelseq++;
+    printf("  push 0\n"); // dummy
     if (node->lhs) {
       gen(node->lhs); // init
+      printf("  pop rax\n");
     }
     printf(".Lbegin%d:\n", label);
     if (node->rhs) {
@@ -106,9 +114,11 @@ void gen(Node *node) {
       printf("  cmp rax, 0\n");
       printf("  je .Lend%d\n", label);
     }
+    printf("  pop rax\n");
     gen(node->for_body);
     if (node->for_third) {
       gen(node->for_third); // post
+      printf("  pop rax\n");
     }
     printf("  jmp .Lbegin%d\n", label);
     printf(".Lend%d:\n", label);

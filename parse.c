@@ -284,10 +284,29 @@ int is_alnum(char c) {
 
 bool at_eof() { return token->kind == TK_EOF; }
 
-LVar *locals;
+Scope *locals;
+
+int next_offset;
+
+void newScope() {
+  Scope *scope = calloc(1, sizeof(Scope));
+  scope->next = locals;
+  locals = scope;
+}
 
 LVar *find_lvar(Token *tok) {
-  for (LVar *var = locals; var; var = var->next) {
+  for (Scope *this = locals; this; this = this->next) {
+    for (LVar *var = this->locals; var; var = var->next) {
+      if (var->len == tok->len && !memcmp(tok->str, var->name, var->len)) {
+        return var;
+      }
+    }
+  }
+  return NULL;
+}
+
+LVar *find_lvar_in_current_scope(Token *tok) {
+  for (LVar *var = locals->locals; var; var = var->next) {
     if (var->len == tok->len && !memcmp(tok->str, var->name, var->len)) {
       return var;
     }
@@ -470,12 +489,31 @@ Node *code[10000];
 
 Node *expr();
 
+Node *stmt();
+
 Node *primary() {
   // 次のトークンが"("なら、"(" expr ")"のはず
   if (consume("(")) {
-    Node *node = expr();
-    expect(")");
-    return node;
+    if (consume("{")) {
+      newScope();
+      Node *node = calloc(1, sizeof(Node));
+      node->kind = ND_BLOCK;
+      NodeArray *nodes = new_node_array();
+      while (!consume("}")) {
+        if (consume(";")) {
+          continue;
+        }
+        node_array_push(nodes, stmt());
+      }
+      node->nodes = nodes;
+      expect(")");
+      locals = locals->next;
+      return node;
+    } else {
+      Node *node = expr();
+      expect(")");
+      return node;
+    }
   }
 
   if (token->kind == TK_STRING_LIT) {
@@ -550,9 +588,9 @@ Node *unary_after() {
 
 Node *unary() {
   if (consume("+"))
-    return unary_after();
+    return unary();
   if (consume("-"))
-    return new_node(ND_SUB, new_node_num(0), unary_after());
+    return new_node(ND_SUB, new_node_num(0), unary());
   if (consume("&"))
     return new_node(ND_ADDR, unary(), NULL);
   if (consume("*"))
@@ -661,18 +699,18 @@ Node *vardef() {
   for (int j = i - 1; j >= 0; j--) {
     ty = array_type(ty, size[j]);
   }
-  LVar *lvar = find_lvar(tok);
+  LVar *lvar = find_lvar_in_current_scope(tok);
   if (lvar)
     error_at(tok->str, "変数が既に定義されています");
   lvar = calloc(1, sizeof(LVar));
-  lvar->next = locals;
+  lvar->next = locals->locals;
   lvar->name = tok->str;
   lvar->len = tok->len;
-  lvar->offset = locals ? locals->offset + size_of(locals->type) +
-                              (8 - size_of(locals->type)) % 8
-                        : 8;
+  lvar->offset = next_offset ? next_offset : 8;
   lvar->type = ty;
-  locals = lvar;
+  next_offset =
+      lvar->offset + size_of(lvar->type) + (8 - size_of(lvar->type)) % 8;
+  locals->locals = lvar;
   node->offset = lvar->offset;
   node->name = tok->str;
   node->len = tok->len;
@@ -707,11 +745,20 @@ Node *stmt() {
     expect(")");
     node->rhs = stmt(); // body
   } else if (consume_kind(TK_FOR)) {
+    newScope();
     node = calloc(1, sizeof(Node));
     node->kind = ND_FOR;
     expect("(");
     if (!consume(";")) {
-      node->lhs = expr();
+      if (token->kind == TK_INT || token->kind == TK_CHAR) {
+        node->lhs = vardef();
+        expect("=");
+        node->lhs->kind = ND_LVAR;
+        node->lhs = new_node(ND_ASSIGN, node->lhs, assign());
+      } else {
+        node->lhs = expr();
+      }
+
       expect(";");
     }
     if (!consume(";")) {
@@ -723,16 +770,26 @@ Node *stmt() {
       expect(")");
     }
     node->for_body = stmt();
+    locals = locals->next;
   } else if (consume("{")) {
+    newScope();
     node = calloc(1, sizeof(Node));
     node->kind = ND_BLOCK;
     NodeArray *nodes = new_node_array();
     while (!consume("}")) {
+      if (consume(";")) {
+        continue;
+      }
       node_array_push(nodes, stmt());
     }
     node->nodes = nodes;
+    locals = locals->next;
   } else if (token->kind == TK_INT || token->kind == TK_CHAR) {
     node = vardef();
+    if (consume("=")) {
+      node->kind = ND_LVAR;
+      node = new_node(ND_ASSIGN, node, assign());
+    }
     expect(";");
   } else {
     node = expr();
@@ -744,10 +801,14 @@ Node *stmt() {
 }
 
 Node *fundef() {
+  locals = NULL;
+  newScope();
   Node *node = vardef();
   // 関数定義
   if (consume("(")) {
     locals = NULL;
+    newScope();
+    next_offset = 0;
     LVar *funtype = calloc(1, sizeof(LVar));
     funtype->next = funtypes;
     funtype->name = node->name;
@@ -768,7 +829,7 @@ Node *fundef() {
     node->rhs = stmt();
     if (node->rhs->kind != ND_BLOCK)
       error_at(token->str, "関数定義が不適切です");
-    int offset = locals ? locals->offset : 0;
+    int offset = next_offset;
     if (offset % 16)
       offset += 16 - offset % 16;
     node->offset = offset;
