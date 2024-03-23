@@ -157,9 +157,9 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     break;
   default:
     if (lhs->type->ty == ARRAY)
-      node->type = pointer_to(lhs->type->ptr_to);
+      node->type = lhs->type;
     else if (rhs && rhs->type->ty == ARRAY)
-      node->type = pointer_to(rhs->type->ptr_to);
+      node->type = rhs->type;
     else if (rhs && rhs->type->ty == PTR)
       node->type = rhs->type;
     else
