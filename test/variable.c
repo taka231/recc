@@ -48,6 +48,8 @@ int main() {
   ASSERT(2, ({ int x=2; { int x=3; } int y=4; x; }));
   ASSERT(3, ({ int x=2; { x=3; } x; }));
 
+  ASSERT(3, ({ char x[3]; x[0] = -1; x[1] = 2; int y = 4; x[0] + y;}));
+
   printf("OK\n");
   return 0;
 }

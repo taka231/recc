@@ -4,6 +4,14 @@
  * This is a block comment.
  */
 
+int func1() {
+  int i;
+  i = 0;
+  for (;;i = i + 1)
+    if (i == 10)
+      return i;
+}
+
 int main() {
   ASSERT(3, ({ int x; if (0) x=2; else x=3; x; }));
   ASSERT(3, ({ int x; if (1-1) x=2; else x=3; x; }));
@@ -21,6 +29,8 @@ int main() {
 
   ASSERT(10, ({ int i=0; while(i<10) i=i+1; i; }));
   ASSERT(55, ({ int i=0; int j=0; while(i<=10) {j=i+j; i=i+1;} j; }));
+
+  ASSERT(10, func1());
 
   printf("OK\n");
   return 0;

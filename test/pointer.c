@@ -7,6 +7,7 @@ int main() {
   ASSERT(8, ({ int x; int y; x=3; y=5; x+y; }));
   ASSERT(8, ({ int x=3; int y=5; x+y; }));
 
+  ASSERT(3, ({ int x[3]; 0[x] = 3; x[0]; }));
   ASSERT(3, ({ int x[2]; int *y=&x; *y=3; *x; }));
 
   ASSERT(3, ({ int x[3]; *x=3; *(x+1)=4; *(x+2)=5; *x; }));
@@ -32,6 +33,8 @@ int main() {
   ASSERT(3, ({ int x[2][3]; int *y=x; y[3]=3; x[1][0]; }));
   ASSERT(4, ({ int x[2][3]; int *y=x; y[4]=4; x[1][1]; }));
   ASSERT(5, ({ int x[2][3]; int *y=x; y[5]=5; x[1][2]; }));
+
+  ASSERT(3, ({ char x[3]; x[0] = -1; x[1] = 2; int y = 4; x[0] + y; }));
 
   printf("OK\n");
   return 0;
