@@ -468,6 +468,12 @@ Token *tokenize(char *p) {
       continue;
     }
 
+    if (strncmp(p, "break", 5) == 0 && !is_alnum(p[5])) {
+      cur = new_token(TK_BREAK, cur, p);
+      p += 5;
+      continue;
+    }
+
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p++);
       cur->len = 1;
@@ -791,6 +797,11 @@ Node *stmt() {
       node = new_node(ND_ASSIGN, node, assign());
     }
     expect(";");
+  } else if (consume_kind(TK_BREAK)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_BREAK;
+    if (!consume(";"))
+      error_at(token->str, "';'ではないトークンです");
   } else {
     node = expr();
     if (!consume(";"))

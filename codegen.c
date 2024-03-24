@@ -1,7 +1,10 @@
 #include "recc.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int labelseq = 1;
+
+char *loop_label;
 
 void gen(Node *node);
 
@@ -88,6 +91,9 @@ void gen(Node *node) {
   }
   case ND_WHILE: {
     int label = labelseq++;
+    char *prev_label = loop_label;
+    loop_label = malloc(20);
+    sprintf(loop_label, ".Lend%d", label);
     printf("push 0\n"); // dummy
     printf(".Lbegin%d:\n", label);
     gen(node->lhs); // cond
@@ -98,10 +104,14 @@ void gen(Node *node) {
     gen(node->rhs); // body
     printf("  jmp .Lbegin%d\n", label);
     printf(".Lend%d:\n", label);
+    loop_label = prev_label;
     return;
   }
   case ND_FOR: {
     int label = labelseq++;
+    char *prev_label = loop_label;
+    loop_label = malloc(20);
+    sprintf(loop_label, ".Lend%d", label);
     printf("  push 0\n"); // dummy
     if (node->lhs) {
       gen(node->lhs); // init
@@ -122,6 +132,7 @@ void gen(Node *node) {
     }
     printf("  jmp .Lbegin%d\n", label);
     printf(".Lend%d:\n", label);
+    loop_label = prev_label;
     return;
   }
   case ND_BLOCK:
@@ -180,6 +191,11 @@ void gen(Node *node) {
   case ND_VARDEF:
     // dummy
     printf("  push 0\n");
+    return;
+  case ND_BREAK:
+    if (loop_label == NULL)
+      error("break文がループの外にあります");
+    printf("  jmp %s\n", loop_label);
     return;
   }
 

@@ -13,6 +13,7 @@ typedef enum {
   TK_FOR,        // for
   TK_INT,        // int
   TK_CHAR,       // char
+  TK_BREAK,      // break
   TK_SIZEOF,     // sizeof
 } TokenKind;
 
@@ -64,7 +65,8 @@ typedef enum {
   ND_BLOCK,      // { ... }
   ND_CALL,       // 関数呼び出し
   ND_VARDEF,     // 変数定義
-  ND_FUNDEF      // 関数定義
+  ND_FUNDEF,      // 関数定義
+  ND_BREAK,      // break
 } NodeKind;
 
 typedef struct Node Node;
